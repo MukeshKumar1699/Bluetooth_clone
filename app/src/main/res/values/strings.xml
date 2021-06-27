@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">Bluetooth Clone</string>
+    <string name="startScan">Start Scan Devices</string>
+    <string name="stopScan">Stop Scan Devices</string>
+    <string name="connectedDevice">Show Connect Device</string>
+    <string name="devicename">"Devicename : "</string>
+    <string name="deviceaddress">"Device Address : "</string>
+</resources>
