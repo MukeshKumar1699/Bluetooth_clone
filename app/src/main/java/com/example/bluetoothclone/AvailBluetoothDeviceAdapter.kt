@@ -6,7 +6,10 @@ import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import com.example.bluetoothclone.databinding.AvailBluetoothDeviceBinding
 
-class AvailBluetoothDeviceAdapter(var bluetoothDeviceDataList: ArrayList<BluetoothDeviceData>) :
+class AvailBluetoothDeviceAdapter(
+    var bluetoothDeviceDataList: ArrayList<BluetoothDeviceData>,
+    val itemClickListener: ItemClickListener
+) :
     RecyclerView.Adapter<AvailBluetoothDeviceViewHolder>() {
     override fun onCreateViewHolder(
         parent: ViewGroup,
@@ -21,7 +24,7 @@ class AvailBluetoothDeviceAdapter(var bluetoothDeviceDataList: ArrayList<Bluetoo
     override fun onBindViewHolder(holder: AvailBluetoothDeviceViewHolder, position: Int) {
 
         val bluetoothDeviceData = bluetoothDeviceDataList[position]
-        holder.setData(bluetoothDeviceData)
+        holder.setData(bluetoothDeviceData, itemClickListener)
     }
 
     override fun getItemCount(): Int {
@@ -29,7 +32,13 @@ class AvailBluetoothDeviceAdapter(var bluetoothDeviceDataList: ArrayList<Bluetoo
         return bluetoothDeviceDataList.size
     }
 
-    fun updateRecylcerData(bluetoothDeviceDataList: ArrayList<BluetoothDeviceData>) {
+    fun deleteRecyclerData() {
+        bluetoothDeviceDataList.clear()
+        notifyDataSetChanged()
+    }
+    fun updateRecylcerData(
+        bluetoothDeviceDataList: ArrayList<BluetoothDeviceData>,
+    ) {
 //        this.bluetoothDeviceDataList.clear()
         this.bluetoothDeviceDataList = bluetoothDeviceDataList
         notifyDataSetChanged()
@@ -43,10 +52,14 @@ class AvailBluetoothDeviceViewHolder(val binding: AvailBluetoothDeviceBinding) :
     RecyclerView.ViewHolder(binding.root) {
 
     @SuppressLint("SetTextI18n")
-    fun setData(bluetoothDeviceData: BluetoothDeviceData) {
+    fun setData(bluetoothDeviceData: BluetoothDeviceData, itemClickListener: ItemClickListener) {
 
         binding.tvDeviceName.text = bluetoothDeviceData.deviceName
         binding.tvDeviceAddress.text = bluetoothDeviceData.deviceAddress
+
+        binding.cvItem.setOnClickListener {
+            itemClickListener.onBluetoothDeviceItemCLicked(position = adapterPosition, bluetoothDeviceData)
+        }
     }
 
 }

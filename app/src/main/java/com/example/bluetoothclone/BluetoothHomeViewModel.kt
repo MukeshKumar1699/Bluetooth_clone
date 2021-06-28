@@ -1,5 +1,6 @@
 package com.example.bluetoothclone
 
+import android.content.BroadcastReceiver
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -15,6 +16,10 @@ class BluetoothHomeViewModel : ViewModel() {
 
     fun getPairedDevices() {
 
-        mutableLiveData.value = BluetoothHomeUIModel.Success(repository.getPairedDevices())
+        mutableLiveData.value = BluetoothHomeUIModel.Connected(repository.getPairedDevices())
+    }
+
+    fun scanForDevices() {
+        mutableLiveData.value = BluetoothHomeUIModel.scanForDevices(repository.scanForDevices())
     }
 }

@@ -1,82 +1,186 @@
 package com.example.bluetoothclone
 
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
-import android.bluetooth.BluetoothDevice.ACTION_FOUND
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.view.View
 import android.widget.Toast
+import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
-import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.bluetoothclone.databinding.ActivityBluetoothHomeBinding
 
 
-class BluetoothHomeActivity : AppCompatActivity() {
+class BluetoothHomeActivity : AppCompatActivity(), ItemClickListener {
 
     private lateinit var binding: ActivityBluetoothHomeBinding
 
     private lateinit var bluetoothAdapter: BluetoothAdapter
-    private val REQUESTCODE_ENABLE_BT: Int = 1
-
-    private lateinit var bluetoothHomeViewModel: BluetoothHomeViewModel
+    private val REQUEST_ENABLE_BT: Int = 1
 
 
     private lateinit var recyclerAdapter: AvailBluetoothDeviceAdapter
 
     private var bluetoothDeviceDataList = ArrayList<BluetoothDeviceData>()
 
+    private var scanState: Boolean = false
 
+    @RequiresApi(Build.VERSION_CODES.M)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         binding = ActivityBluetoothHomeBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        initDefaults()
-        initBlueTooth()
-        initRecycler()
-        observeLiveData()
-
-    }
-
-    private fun initDefaults() {
-
         bluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
 
-        bluetoothHomeViewModel = ViewModelProvider(this).get(BluetoothHomeViewModel::class.java)
 
-        val filter = IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED)
-        registerReceiver(mReceiver, filter)
 
-//        binding.toolbar.swBluetoothOP.setOnCheckedChangeListener { buttonView, isChecked ->
-//
-//            if (bluetoothAdapter.isEnabled) {
-//                binding.toolbar.swBluetoothOP.isChecked = true
-//            }
-//            if (isChecked) {
-//                startActivityForResult(
-//                    Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE),
-//                    REQUESTCODE_ENABLE_BT
-//                )
-//            } else if (!isChecked) {
-//
-//                bluetoothAdapter.disable()
-//                updateUI(View.GONE, R.drawable.ic_bluetooth_off)
-//
-//            }
-//
-//        }
+
+        if (bluetoothAdapter == null) {
+            Toast.makeText(
+                this@BluetoothHomeActivity,
+                "Bluetooth Hardware Not Detected",
+                Toast.LENGTH_SHORT
+            )
+                .show()
+        } else {
+
+            initRecycler()
+            initDefaultsAndBluetoothState()
+        }
 
     }
 
-    private fun updateUI(view: Int, icBluetoothStatus: Int) {
 
+    @SuppressLint("SetTextI18n")
+    @RequiresApi(Build.VERSION_CODES.M)
+    private fun initDefaultsAndBluetoothState() {
+
+        if (bluetoothAdapter.isEnabled) {
+            binding.toolbar.swBluetoothOP.isChecked = true
+            updateUI(View.VISIBLE, R.drawable.ic_bluetooth_on)
+        }
+
+        val filter = IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED)
+        registerReceiver(receiveBluetoothStateChange, filter)
+
+        binding.toolbar.swBluetoothOP.setOnCheckedChangeListener { buttonView, isChecked ->
+
+            if (isChecked) {
+                if (!bluetoothAdapter.isEnabled) {
+                    val enableBtIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
+                    startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT)
+                } else {
+                    updateUI(View.VISIBLE, R.drawable.ic_bluetooth_on)
+                }
+            } else {
+                bluetoothAdapter.disable()
+                updateUI(View.GONE, R.drawable.ic_bluetooth_off)
+            }
+
+        }
+
+        binding.btnDiscover.setOnClickListener {
+
+            if (scanState) {
+                cancelDiscovery()
+            } else {
+                Toast.makeText(this@BluetoothHomeActivity, "Search will be available for 120 sec", Toast.LENGTH_SHORT).show()
+                startDiscovery()
+
+                Handler(Looper.getMainLooper()).postDelayed({
+                    cancelDiscovery()
+                }, 1200000)
+
+            }
+        }
+
+        binding.btnConnectedDevices.setOnClickListener {
+
+            val intent = Intent(this@BluetoothHomeActivity, PairedDeviceActivity::class.java)
+            startActivity(intent)
+
+        }
+
+    }
+    private fun cancelDiscovery() {
+        binding.btnDiscover.text = "Start Scan Device"
+        scanState = false
+        bluetoothAdapter.isDiscovering
+        bluetoothAdapter.cancelDiscovery()
+        recyclerAdapter.deleteRecyclerData()
+    }
+
+    private fun startDiscovery() {
+        binding.btnDiscover.text = "Stop Scan"
+        scanState = true
+        bluetoothAdapter.startDiscovery()
+
+        val filter1 = IntentFilter(BluetoothDevice.ACTION_FOUND)
+        registerReceiver(receiveBluetoothDevices, filter1)
+    }
+
+    // Create a BroadcastReceiver for ACTION_FOUND.
+    private val receiveBluetoothDevices = object : BroadcastReceiver() {
+
+        override fun onReceive(context: Context, intent: Intent) {
+            val action: String? = intent.action
+
+            when (action) {
+                BluetoothDevice.ACTION_FOUND -> {
+                    // Discovery has found a device. Get the BluetoothDevice
+                    // object and its info from the Intent.
+                    val device: BluetoothDevice? =
+                        intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE)
+//                    Toast.makeText(this@BluetoothHomeActivity, device?.name, Toast.LENGTH_SHORT).show()
+                    val bluetoothDeviceData = BluetoothDeviceData(
+                        deviceName = device!!.name,
+                        deviceAddress = device.address
+                    )
+                    if (!bluetoothDeviceDataList.contains(bluetoothDeviceData)) {
+                        bluetoothDeviceDataList.add(bluetoothDeviceData)
+                    }
+                    updateRecyclerData(bluetoothDeviceDataList)
+                }
+            }
+        }
+
+    }
+
+    fun updateRecyclerData(bluetoothDeviceDataList: ArrayList<BluetoothDeviceData>) {
+        recyclerAdapter.updateRecylcerData(bluetoothDeviceDataList = bluetoothDeviceDataList)
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+
+        when (requestCode) {
+
+            REQUEST_ENABLE_BT ->
+
+                if (resultCode == Activity.RESULT_OK) {
+                    bluetoothAdapter.isEnabled
+                    updateUI(View.VISIBLE, R.drawable.ic_bluetooth_on)
+                } else {
+                    bluetoothAdapter.disable()
+                    updateUI(View.GONE, R.drawable.ic_bluetooth_off)
+                }
+        }
+        super.onActivityResult(requestCode, resultCode, data)
+
+    }
+
+
+    private fun updateUI(view: Int, icBluetoothStatus: Int) {
 
         binding.ivStatus.setImageResource(icBluetoothStatus)
         binding.btnDiscover.visibility = view
@@ -86,7 +190,7 @@ class BluetoothHomeActivity : AppCompatActivity() {
 
     private fun initRecycler() {
 
-        recyclerAdapter = AvailBluetoothDeviceAdapter(bluetoothDeviceDataList)
+        recyclerAdapter = AvailBluetoothDeviceAdapter(bluetoothDeviceDataList, this)
         val layoutManager =
             LinearLayoutManager(this@BluetoothHomeActivity)
 
@@ -97,69 +201,8 @@ class BluetoothHomeActivity : AppCompatActivity() {
         }
     }
 
-    private fun initBlueTooth() {
 
-        bluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
-
-        //check Bluetooth is enabled or Not
-//        if (bluetoothAdapter.disable()) {
-//            binding.ivStatus.setImageResource(R.drawable.ic_bluetooth_off)
-//            Toast.makeText(applicationContext, "Turn On Bluetooth", Toast.LENGTH_SHORT).show()
-//        } else {
-//            binding.ivStatus.setImageResource(R.drawable.ic_bluetooth_on)
-//        }
-
-
-//        binding.btnDiscover.setOnClickListener {
-//
-//            if (bluetoothAdapter.isEnabled) {
-//
-//                bluetoothAdapter.startDiscovery()
-//
-//
-//
-//                recyclerAdapter.updateRecylcerData(bluetoothDeviceDataList = bluetoothDeviceDataList)
-//
-//            } else {
-//                Toast.makeText(applicationContext, "Turn On Bluetooth", Toast.LENGTH_SHORT).show()
-//
-////                startActivityForResult(
-////                    Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE),
-////                    REQUESTCODE_ENABLE_BT
-////                )
-//
-//            }
-//        }
-
-//        binding.btnConnectedDevices.setOnClickListener {
-//
-//            if (bluetoothAdapter.isEnabled) {
-//                bluetoothHomeViewModel.getPairedDevices()
-//            } else {
-//                Toast.makeText(applicationContext, "Turn On Bluetooth", Toast.LENGTH_SHORT).show()
-//            }
-//            if (bluetoothAdapter.isEnabled) {
-//
-//                val devices = bluetoothAdapter.bondedDevices
-//
-//                for (device in devices) {
-//
-//                    val bluetoothDeviceData = BluetoothDeviceData(
-//                        deviceName = device.name,
-//                        deviceAddress = device.address
-//                    )
-//
-//                    bluetoothDeviceDataList.add(bluetoothDeviceData)
-//                }
-//                recyclerAdapter.updateRecylcerData(bluetoothDeviceDataList = bluetoothDeviceDataList)
-//
-//            } else {
-//                Toast.makeText(applicationContext, "Turn On Bluetooth", Toast.LENGTH_SHORT).show()
-//            }
-//        }
-    }
-
-    private val mReceiver: BroadcastReceiver = object : BroadcastReceiver() {
+    private val receiveBluetoothStateChange: BroadcastReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent) {
             val action = intent.action
 
@@ -172,96 +215,85 @@ class BluetoothHomeActivity : AppCompatActivity() {
 
                     when (state) {
                         BluetoothAdapter.STATE_OFF -> {
+//                            Toast.makeText(
+//                                this@BluetoothHomeActivity,
+//                                "Bluetooth State OFF",
+//                                Toast.LENGTH_SHORT
+//                            ).show()
                             binding.ivStatus.setImageResource(R.drawable.ic_bluetooth_off)
                             binding.toolbar.swBluetoothOP.isChecked = false
                         }
 
                         BluetoothAdapter.STATE_TURNING_OFF -> {
-                            Toast.makeText(
-                                this@BluetoothHomeActivity,
-                                "Bluetooth Turning OFF",
-                                Toast.LENGTH_SHORT
-                            ).show()
+//                            Toast.makeText(
+//                                this@BluetoothHomeActivity,
+//                                "Bluetooth Turning OFF",
+//                                Toast.LENGTH_SHORT
+//                            ).show()
 
                         }
 
                         BluetoothAdapter.STATE_ON -> {
+//                            Toast.makeText(
+//                                this@BluetoothHomeActivity,
+//                                "Bluetooth State ON",
+//                                Toast.LENGTH_SHORT
+//                            ).show()
                             binding.ivStatus.setImageResource(R.drawable.ic_bluetooth_on)
-                            binding.toolbar.swBluetoothOP.isChecked = false
+                            binding.toolbar.swBluetoothOP.isChecked = true
 
 
                         }
                         BluetoothAdapter.STATE_TURNING_ON -> {
-                            Toast.makeText(
-                                this@BluetoothHomeActivity,
-                                "Bluetooth Turning ON",
-                                Toast.LENGTH_SHORT
-                            ).show()
+//                            Toast.makeText(
+//                                this@BluetoothHomeActivity,
+//                                "Bluetooth Turning ON",
+//                                Toast.LENGTH_SHORT
+//                            ).show()
 
                         }
                     }
 
                 }
 
-
-                ACTION_FOUND -> {
-
-                    val device: BluetoothDevice? = intent
-                        .getParcelableExtra(BluetoothDevice.EXTRA_DEVICE)
-
-                    Toast.makeText(this@BluetoothHomeActivity, device!!.name, Toast.LENGTH_SHORT)
-                        .show()
-
-                    bluetoothDeviceDataList.add(
-                        BluetoothDeviceData(
-                            deviceName = device!!.name,
-                            deviceAddress = device.address
-                        )
-                    )
-
-                }
+//                ACTION_FOUND -> {
+//
+//                    val device: BluetoothDevice? = intent
+//                        .getParcelableExtra(BluetoothDevice.EXTRA_DEVICE)
+//
+//                    Toast.makeText(this@BluetoothHomeActivity, device!!.name, Toast.LENGTH_SHORT)
+//                        .show()
+//
+//                    bluetoothDeviceDataList.add(
+//                        BluetoothDeviceData(
+//                            deviceName = device!!.name,
+//                            deviceAddress = device.address
+//                        )
+//                    )
+//
+//                }
             }
 
         }
     }
 
-        override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
 
-            when (requestCode) {
-
-                REQUESTCODE_ENABLE_BT ->
-
-                    if (resultCode == Activity.RESULT_OK) {
-                        binding.ivStatus.setImageResource(R.drawable.ic_bluetooth_on)
-                        binding.btnDiscover.visibility = View.VISIBLE
-                        binding.btnConnectedDevices.visibility = View.VISIBLE
-                        binding.rcView.visibility = View.VISIBLE
-                    } else {
-                        binding.ivStatus.setImageResource(R.drawable.ic_bluetooth_off)
-                    }
-            }
-            super.onActivityResult(requestCode, resultCode, data)
-
-        }
-
-        private fun observeLiveData() {
-
-            bluetoothHomeViewModel.liveData.observe(this, {
-                when (it) {
-
-                    is BluetoothHomeUIModel.Success -> {
-                        recyclerAdapter.updateRecylcerData(it.TopRatedList as ArrayList<BluetoothDeviceData>)
-                    }
-
-                }
-
-            })
-        }
-
-        override fun onDestroy() {
-            super.onDestroy()
-            unregisterReceiver(mReceiver)
-        }
-
-
+    override fun onDestroy() {
+        super.onDestroy()
+        unregisterReceiver(receiveBluetoothStateChange)
+        unregisterReceiver(receiveBluetoothDevices)
     }
+
+    override fun onBluetoothDeviceItemCLicked(
+        position: Int,
+        bluetoothDeviceData: BluetoothDeviceData) {
+
+        Toast.makeText(
+            this@BluetoothHomeActivity,
+            bluetoothDeviceData.deviceName,
+            Toast.LENGTH_SHORT
+        ).show()
+    }
+
+
+}

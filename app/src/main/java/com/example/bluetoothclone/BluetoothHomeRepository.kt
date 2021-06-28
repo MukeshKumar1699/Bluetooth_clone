@@ -1,26 +1,37 @@
 package com.example.bluetoothclone
 
 import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothDevice
 
 class BluetoothHomeRepository() {
 
-    private lateinit var bluetoothAdapter: BluetoothAdapter
-    private var bluetoothDeviceDataList = ArrayList<BluetoothDeviceData>()
-
+    private var bluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
 
     fun getPairedDevices(): List<BluetoothDeviceData> {
 
-        bluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
-        val devices = bluetoothAdapter.bondedDevices
 
-        for (device in devices) {
+        var bluetoothDeviceDataList = ArrayList<BluetoothDeviceData>()
 
+        val pairedDevices: Set<BluetoothDevice>? = bluetoothAdapter?.bondedDevices
+
+        pairedDevices?.forEach { device ->
             val bluetoothDeviceData = BluetoothDeviceData(
                 deviceName = device.name,
                 deviceAddress = device.address
             )
-            bluetoothDeviceDataList.add(bluetoothDeviceData)
+            if (!bluetoothDeviceDataList.contains(bluetoothDeviceData)) {
+                bluetoothDeviceDataList.add(bluetoothDeviceData)
+            }
         }
+        return bluetoothDeviceDataList
+    }
+
+    fun scanForDevices(): List<BluetoothDeviceData> {
+
+        var bluetoothDeviceDataList = ArrayList<BluetoothDeviceData>()
+
+
+
         return bluetoothDeviceDataList
     }
 }
