@@ -1,4 +1,4 @@
-package com.example.bluetoothclone
+package com.example.bluetoothclone.activities
 
 import android.annotation.SuppressLint
 import android.app.Activity
@@ -8,15 +8,17 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.view.View
 import android.widget.Toast
-import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.example.bluetoothclone.AvailBluetoothDeviceAdapter
+import com.example.bluetoothclone.dataclass.BluetoothDeviceData
+import com.example.bluetoothclone.listeners.ItemClickListener
+import com.example.bluetoothclone.R
 import com.example.bluetoothclone.databinding.ActivityBluetoothHomeBinding
 
 
@@ -29,21 +31,17 @@ class BluetoothHomeActivity : AppCompatActivity(), ItemClickListener {
 
 
     private lateinit var recyclerAdapter: AvailBluetoothDeviceAdapter
-
     private var bluetoothDeviceDataList = ArrayList<BluetoothDeviceData>()
 
     private var scanState: Boolean = false
 
-    @RequiresApi(Build.VERSION_CODES.M)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         binding = ActivityBluetoothHomeBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+
         bluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
-
-
 
 
         if (bluetoothAdapter == null) {
@@ -61,9 +59,20 @@ class BluetoothHomeActivity : AppCompatActivity(), ItemClickListener {
 
     }
 
+    private fun initRecycler() {
+
+        recyclerAdapter = AvailBluetoothDeviceAdapter(bluetoothDeviceDataList, this)
+        val layoutManager =
+            LinearLayoutManager(this@BluetoothHomeActivity)
+
+        binding.rcView.apply {
+
+            this.adapter = recyclerAdapter
+            this.layoutManager = layoutManager
+        }
+    }
 
     @SuppressLint("SetTextI18n")
-    @RequiresApi(Build.VERSION_CODES.M)
     private fun initDefaultsAndBluetoothState() {
 
         if (bluetoothAdapter.isEnabled) {
@@ -113,16 +122,19 @@ class BluetoothHomeActivity : AppCompatActivity(), ItemClickListener {
         }
 
     }
+
+    @SuppressLint("SetTextI18n")
     private fun cancelDiscovery() {
-        binding.btnDiscover.text = "Start Scan Device"
+        binding.btnDiscover.text = "Start Scanning Device"
         scanState = false
         bluetoothAdapter.isDiscovering
         bluetoothAdapter.cancelDiscovery()
         recyclerAdapter.deleteRecyclerData()
     }
 
+    @SuppressLint("SetTextI18n")
     private fun startDiscovery() {
-        binding.btnDiscover.text = "Stop Scan"
+        binding.btnDiscover.text = "Stop Scanning Device"
         scanState = true
         bluetoothAdapter.startDiscovery()
 
@@ -156,52 +168,6 @@ class BluetoothHomeActivity : AppCompatActivity(), ItemClickListener {
         }
 
     }
-
-    fun updateRecyclerData(bluetoothDeviceDataList: ArrayList<BluetoothDeviceData>) {
-        recyclerAdapter.updateRecylcerData(bluetoothDeviceDataList = bluetoothDeviceDataList)
-    }
-
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-
-        when (requestCode) {
-
-            REQUEST_ENABLE_BT ->
-
-                if (resultCode == Activity.RESULT_OK) {
-                    bluetoothAdapter.isEnabled
-                    updateUI(View.VISIBLE, R.drawable.ic_bluetooth_on)
-                } else {
-                    bluetoothAdapter.disable()
-                    updateUI(View.GONE, R.drawable.ic_bluetooth_off)
-                }
-        }
-        super.onActivityResult(requestCode, resultCode, data)
-
-    }
-
-
-    private fun updateUI(view: Int, icBluetoothStatus: Int) {
-
-        binding.ivStatus.setImageResource(icBluetoothStatus)
-        binding.btnDiscover.visibility = view
-        binding.btnConnectedDevices.visibility = view
-        binding.rcView.visibility = view
-    }
-
-    private fun initRecycler() {
-
-        recyclerAdapter = AvailBluetoothDeviceAdapter(bluetoothDeviceDataList, this)
-        val layoutManager =
-            LinearLayoutManager(this@BluetoothHomeActivity)
-
-        binding.rcView.apply {
-
-            this.adapter = recyclerAdapter
-            this.layoutManager = layoutManager
-        }
-    }
-
-
     private val receiveBluetoothStateChange: BroadcastReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent) {
             val action = intent.action
@@ -250,49 +216,56 @@ class BluetoothHomeActivity : AppCompatActivity(), ItemClickListener {
 //                                "Bluetooth Turning ON",
 //                                Toast.LENGTH_SHORT
 //                            ).show()
-
                         }
                     }
-
                 }
-
-//                ACTION_FOUND -> {
-//
-//                    val device: BluetoothDevice? = intent
-//                        .getParcelableExtra(BluetoothDevice.EXTRA_DEVICE)
-//
-//                    Toast.makeText(this@BluetoothHomeActivity, device!!.name, Toast.LENGTH_SHORT)
-//                        .show()
-//
-//                    bluetoothDeviceDataList.add(
-//                        BluetoothDeviceData(
-//                            deviceName = device!!.name,
-//                            deviceAddress = device.address
-//                        )
-//                    )
-//
-//                }
             }
-
         }
     }
 
-
-    override fun onDestroy() {
-        super.onDestroy()
-        unregisterReceiver(receiveBluetoothStateChange)
-        unregisterReceiver(receiveBluetoothDevices)
+    fun updateRecyclerData(bluetoothDeviceDataList: ArrayList<BluetoothDeviceData>) {
+        recyclerAdapter.updateRecylcerData(bluetoothDeviceDataList = bluetoothDeviceDataList)
     }
 
-    override fun onBluetoothDeviceItemCLicked(
-        position: Int,
-        bluetoothDeviceData: BluetoothDeviceData) {
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+
+        when (requestCode) {
+
+            REQUEST_ENABLE_BT ->
+
+                if (resultCode == Activity.RESULT_OK) {
+                    bluetoothAdapter.isEnabled
+                    updateUI(View.VISIBLE, R.drawable.ic_bluetooth_on)
+                } else {
+                    bluetoothAdapter.disable()
+                    updateUI(View.GONE, R.drawable.ic_bluetooth_off)
+                }
+        }
+        super.onActivityResult(requestCode, resultCode, data)
+
+    }
+
+    private fun updateUI(view: Int, icBluetoothStatus: Int) {
+
+        binding.ivStatus.setImageResource(icBluetoothStatus)
+        binding.btnDiscover.visibility = view
+        binding.btnConnectedDevices.visibility = view
+        binding.rcView.visibility = view
+    }
+
+    override fun onBluetoothDeviceItemCLicked(position: Int, bluetoothDeviceData: BluetoothDeviceData) {
 
         Toast.makeText(
             this@BluetoothHomeActivity,
             bluetoothDeviceData.deviceName,
             Toast.LENGTH_SHORT
         ).show()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        unregisterReceiver(receiveBluetoothStateChange)
+        unregisterReceiver(receiveBluetoothDevices)
     }
 
 

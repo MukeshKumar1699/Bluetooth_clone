@@ -1,4 +1,4 @@
-package com.example.bluetoothclone
+package com.example.bluetoothclone.dataclass
 
 data class BluetoothDeviceData(
 

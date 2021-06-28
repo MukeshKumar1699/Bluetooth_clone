@@ -5,6 +5,8 @@ import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import com.example.bluetoothclone.databinding.AvailBluetoothDeviceBinding
+import com.example.bluetoothclone.dataclass.BluetoothDeviceData
+import com.example.bluetoothclone.listeners.ItemClickListener
 
 class AvailBluetoothDeviceAdapter(
     var bluetoothDeviceDataList: ArrayList<BluetoothDeviceData>,

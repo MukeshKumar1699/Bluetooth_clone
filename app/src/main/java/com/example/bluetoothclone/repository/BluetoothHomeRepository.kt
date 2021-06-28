@@ -1,7 +1,8 @@
-package com.example.bluetoothclone
+package com.example.bluetoothclone.repository
 
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
+import com.example.bluetoothclone.dataclass.BluetoothDeviceData
 
 class BluetoothHomeRepository() {
 

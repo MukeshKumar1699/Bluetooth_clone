@@ -1,9 +1,10 @@
-package com.example.bluetoothclone
+package com.example.bluetoothclone.ViewModel
 
-import android.content.BroadcastReceiver
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import com.example.bluetoothclone.UIModel.BluetoothHomeUIModel
+import com.example.bluetoothclone.repository.BluetoothHomeRepository
 
 class BluetoothHomeViewModel : ViewModel() {
 

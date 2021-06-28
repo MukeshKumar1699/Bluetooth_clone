@@ -18,8 +18,8 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.BluetoothClone">
-        <activity android:name=".PairedDeviceActivity"></activity>
-        <activity android:name=".BluetoothHomeActivity">
+        <activity android:name=".activities.PairedDeviceActivity"></activity>
+        <activity android:name=".activities.BluetoothHomeActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 

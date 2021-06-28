@@ -1,4 +1,6 @@
-package com.example.bluetoothclone
+package com.example.bluetoothclone.UIModel
+
+import com.example.bluetoothclone.dataclass.BluetoothDeviceData
 
 sealed class BluetoothHomeUIModel{
 
